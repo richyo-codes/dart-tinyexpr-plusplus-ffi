@@ -15,19 +15,6 @@ int getLastErrorPosition() => tepp_get_last_error_position();
 typedef tepp_set_constant_native = Void Function(Pointer<ffitype.Utf8>, Double);
 typedef TeppSetConstant = void Function(Pointer<ffitype.Utf8>, double);
 
-
-// typedef tepp_get_last_error_position_native = Int32 Function();
-// typedef TeppGetLastErrorPosition = int Function();
-
-// final TeppGetLastErrorPosition teppGetLastErrorPosition =
-//     _lib
-//         .lookup<NativeFunction<tepp_get_last_error_position_native>>(
-//           'tepp_get_last_error_position',
-//         )
-//         .asFunction();
-
-// int getLastErrorPosition() => teppGetLastErrorPosition();
-
 void setCustomVariable(String name, double value) {
   final exprPtr = name.toNativeUtf8().cast<ffi.Void>();
   final namePtr = name.toNativeUtf8().cast<ffi.Char>();
