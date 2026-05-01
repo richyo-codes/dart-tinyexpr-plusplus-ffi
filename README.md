@@ -13,17 +13,18 @@ platform-specific backends:
 ## Current API
 
 ```dart
-import 'package:tinyexpr_plusplus_ffi/tinyexprpp_fii.dart';
+import 'package:tinyexpr_plusplus_ffi/tinyexpr_plusplus_ffi.dart';
 
 final value = evaluateExpression('1 + 2 * 3');
 final error = getLastErrorMessage();
 final position = getLastErrorPosition();
 ```
 
-The package also exposes low-level native bindings such as `tepp_eval`,
-`tepp_compile`, `tepp_eval_compiled`, and `tepp_free`. These are implementation
-details for most app code. Prefer the friendly Dart functions unless you need
-direct access to the native API.
+The old `tinyexprpp_fii.dart` import path remains available as a compatibility
+export. Low-level native bindings such as `tepp_eval`, `tepp_compile`,
+`tepp_eval_compiled`, and `tepp_free` are now kept in
+`src/native_bindings.dart` and should be treated as native-only implementation
+details.
 
 ## Native Build
 
@@ -37,18 +38,34 @@ The build hook compiles:
 The wrapper exports a C ABI from `src/native/tinyexprpp_wrapper.h`, which keeps
 the Dart boundary simple even though the implementation is C++.
 
-## Web Direction
+## Web Backend
 
-`dart:ffi` is not available to normal Flutter web builds, so web support needs a
-different backend. The package should hide that behind the same public API.
+`dart:ffi` is not available to normal Flutter web builds, so the public facade
+uses a WebAssembly backend on web. Web apps must initialize it before calling the
+synchronous API:
 
-Possible web backends:
+```dart
+await initializeTinyExpr();
 
-- compile the C ABI wrapper to WebAssembly and call it through a web-compatible
-  FFI/interop layer
-- implement a pure Dart evaluator with matching semantics
-- start with a pure Dart evaluator and later replace it with WASM if behavior or
-  performance requires it
+final value = evaluateExpression('2 + 2');
+```
+
+Build the Emscripten artifacts with:
+
+```sh
+tool/build_wasm.sh
+```
+
+The script emits `lib/tinyexprpp.js`, `lib/tinyexprpp.wasm`, and copies the same
+runtime artifacts to `web/`. If a consuming web app serves the loader or WASM
+from a custom location, pass explicit URLs:
+
+```dart
+await initializeTinyExpr(
+  moduleUrl: 'tinyexprpp_loader.js',
+  wasmUrl: 'tinyexprpp.wasm',
+);
+```
 
 See `docs/platform-backends-plan.md` for the implementation plan.
 
@@ -71,3 +88,8 @@ Regenerate bindings if the native wrapper changes:
 ```sh
 dart run ffigen --config ffigen.yaml
 ```
+
+## Credits
+
+- https://github.com/Blake-Madden/tinyexpr-plusplus
+- https://github.com/codeplea/tinyexpr

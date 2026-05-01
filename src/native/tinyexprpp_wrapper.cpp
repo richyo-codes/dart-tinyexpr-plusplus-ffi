@@ -19,15 +19,15 @@ extern "C" {
 
 static thread_local std::string g_last_error_msg;
 static thread_local int g_last_error_pos = -1;
+static thread_local te_parser g_default_parser;
 
 // Wrapper for evaluating an expression
 double tepp_eval(const char* expression) {
     try {
-        te_parser parser;
-        double result = parser.evaluate(expression);
-        if (!parser.success()) {
-            g_last_error_msg = parser.get_last_error_message();
-            g_last_error_pos = parser.get_last_error_position();
+        double result = g_default_parser.evaluate(expression);
+        if (!g_default_parser.success()) {
+            g_last_error_msg = g_default_parser.get_last_error_message();
+            g_last_error_pos = g_default_parser.get_last_error_position();
         } else {
             g_last_error_msg.clear();
             g_last_error_pos = -1;
@@ -103,26 +103,29 @@ void tepp_free(void* compiled_expr) {
 
 // Wrapper for setting a constant variable
 void tepp_set_constant(void* compiled_expr, const char* name, double value) {
-    if (!compiled_expr || !name) {
+    if (!name) {
         return;
     }
     try {
-        auto* parser = static_cast<te_parser*>(compiled_expr);
+        auto* parser = compiled_expr ? static_cast<te_parser*>(compiled_expr) : &g_default_parser;
         parser->set_constant(name, value);
     } catch (const std::exception& e) {
-        // Ignore errors
+        g_last_error_msg = e.what();
+        g_last_error_pos = -1;
     }
 }
 
 // Wrapper for getting a constant variable
 double tepp_get_constant(void* compiled_expr, const char* name) {
-    if (!compiled_expr || !name) {
+    if (!name) {
         return NAN;
     }
     try {
-        auto* parser = static_cast<te_parser*>(compiled_expr);
+        auto* parser = compiled_expr ? static_cast<te_parser*>(compiled_expr) : &g_default_parser;
         return parser->get_constant(name);
     } catch (const std::exception& e) {
+        g_last_error_msg = e.what();
+        g_last_error_pos = -1;
         return NAN;
     }
 }
