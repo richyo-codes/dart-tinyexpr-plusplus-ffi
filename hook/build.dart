@@ -24,6 +24,10 @@ Future<String> _detectCompilerFamily(CCompilerConfig? cc) async {
 
 Future<void> main(List<String> args) async {
   await build(args, (input, output) async {
+    if (!input.config.buildCodeAssets) {
+      return;
+    }
+
     final codeCfg = input.config.code;
     final cc = codeCfg.cCompiler;
     final compilerFamily = await _detectCompilerFamily(cc);
@@ -53,7 +57,7 @@ Future<void> main(List<String> args) async {
 
     final cbuilder = CBuilder.library(
       name: 'tinyexprpp_fii',
-      assetName: 'tinyexprpp_fii.dart',
+      assetName: 'src/native_bindings.dart',
       includes: ['src/native/'],
       defines: defines,
       sources: ['src/native/tinyexprpp_wrapper.cpp', 'src/native/tinyexpr.cpp'],
