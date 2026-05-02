@@ -89,6 +89,31 @@ Regenerate bindings if the native wrapper changes:
 dart run ffigen --config ffigen.yaml
 ```
 
+Run browser/WASM tests:
+
+```sh
+dart test -p chrome test/tinyexpr_web_test.dart
+```
+
+### Fedora ccache note
+
+On Fedora, `/usr/lib64/ccache` may appear before `/usr/bin` in `PATH`. That can
+confuse `native_toolchain_c`: it detects `/usr/lib64/ccache/clang`, but the
+native asset hook may execute `/usr/bin/ccache` directly with clang flags,
+failing with:
+
+```text
+/usr/bin/ccache: invalid option -- 'f'
+```
+
+Run native hook commands and browser tests with the ccache shim directory
+removed from `PATH`, or ensure the real compiler is resolved first:
+
+```sh
+env PATH="$(printf '%s' "$PATH" | tr ':' '\n' | grep -v '^/usr/lib64/ccache$' | paste -sd: -)" \
+  dart test -p chrome test/tinyexpr_web_test.dart
+```
+
 ## Credits
 
 - https://github.com/Blake-Madden/tinyexpr-plusplus

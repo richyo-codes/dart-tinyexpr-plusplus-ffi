@@ -8,10 +8,11 @@ final TinyExprBackend backend = WebTinyExprBackend();
 
 class WebTinyExprBackend implements TinyExprBackend {
   static const _loaderUrl =
-      'packages/tinyexpr_plusplus_ffi/tinyexprpp_loader.js';
+      './assets/packages/tinyexpr_plusplus_ffi/lib/tinyexprpp_loader.js';
 
   _TinyExprWasmModule? _module;
   Future<void>? _initializing;
+  String _lastInteropError = '';
 
   @override
   Future<void> initialize({String? moduleUrl, String? wasmUrl}) {
@@ -24,31 +25,42 @@ class WebTinyExprBackend implements TinyExprBackend {
   }
 
   Future<void> _load({String? moduleUrl, String? wasmUrl}) async {
-    final loader = _TinyExprWasmLoader(
-      await importModule((moduleUrl ?? _loaderUrl).toJS).toDart,
-    );
     final options = JSObject();
     if (wasmUrl != null) {
       options['wasmUrl'] = wasmUrl.toJS;
     }
-    _module = await loader.initializeTinyExpr(options).toDart;
+
+    try {
+      final loader = _TinyExprWasmLoader(
+        await importModule((moduleUrl ?? _loaderUrl).toJS).toDart,
+      );
+      _module = await loader.initializeTinyExpr(options).toDart;
+      _lastInteropError = '';
+    } catch (error) {
+      _lastInteropError = error.toString();
+      rethrow;
+    }
   }
 
   @override
   double evaluate(String expression) {
     final module = _requireModule();
-    final expressionPtr = _writeString(module, expression);
     try {
-      return module.teppEval(expressionPtr);
-    } catch (_) {
+      final result = module.evaluateExpression(expression);
+      _lastInteropError = '';
+      return result;
+    } catch (error) {
+      _lastInteropError = error.toString();
       return double.nan;
-    } finally {
-      module.free(expressionPtr);
     }
   }
 
   @override
   String get lastErrorMessage {
+    if (_lastInteropError.isNotEmpty) {
+      return _lastInteropError;
+    }
+
     final module = _module;
     if (module == null) {
       return '';
@@ -104,6 +116,8 @@ extension type _TinyExprWasmLoader(JSObject _) implements JSObject {
 }
 
 extension type _TinyExprWasmModule(JSObject _) implements JSObject {
+  external double evaluateExpression(String expression);
+
   @JS('_malloc')
   external int malloc(int size);
 
